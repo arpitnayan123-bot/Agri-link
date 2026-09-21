@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AgriLink — Farm to door in hours. Zero middlemen.</title>
+<meta name="description" content="AgriLink is India's farmer-direct quick-commerce app: your UPI payment instantly pays every farmer in your basket — with payout proof on the receipt." />
+<meta property="og:title" content="AgriLink — Farmer-direct quick-commerce" />
+<meta property="og:description" content="Your payment IS the farmer's payment. Instantly. Over UPI." />
+<meta property="og:image" content="assets/01-market-light.png" />
+<link rel="icon" type="image/png" href="assets/agrilink-logo.png" />
+<style>
+  :root{
+    --cream:#fdf8ef; --ink:#1c2b21; --green:#16a34a; --green-deep:#14532d;
+    --mango:#f59e0b; --berry:#ec4899; --leaf:#84cc16;
+    --clay-shadow:8px 8px 18px rgba(28,43,33,.10), -8px -8px 18px rgba(255,255,255,.9);
+    --clay-inset:inset 4px 4px 10px rgba(28,43,33,.10), inset -4px -4px 10px rgba(255,255,255,.95);
+    --radius:26px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:"Nunito","Segoe UI",system-ui,-apple-system,sans-serif;
+    background:var(--cream); color:var(--ink); overflow-x:hidden;
+  }
+  ::selection{background:#bbf7d0}
+
+  /* ---------- animated backdrop ---------- */
+  .blob{position:fixed;border-radius:50%;filter:blur(70px);opacity:.5;z-index:-2;animation:drift 18s ease-in-out infinite alternate}
+  .b1{width:420px;height:420px;background:#bbf7d0;top:-120px;left:-120px}
+  .b2{width:380px;height:380px;background:#fde68a;top:30%;right:-140px;animation-delay:-6s}
+  .b3{width:340px;height:340px;background:#fbcfe8;bottom:-120px;left:25%;animation-delay:-12s}
+  @keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(60px,40px) scale(1.12)}}
+
+  .floaty{position:fixed;z-index:-1;font-size:2.2rem;opacity:.85;animation:bob 7s ease-in-out infinite;filter:drop-shadow(6px 6px 10px rgba(28,43,33,.15))}
+  @keyframes bob{0%,100%{transform:translateY(0) rotate(-6deg)}50%{transform:translateY(-26px) rotate(7deg)}}
+
+  /* ---------- layout ---------- */
+  .wrap{max-width:1120px;margin:0 auto;padding:0 22px}
+  section{padding:70px 0}
+  .center{text-align:center}
+
+  nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(14px);background:rgba(253,248,239,.8);border-bottom:1px solid rgba(28,43,33,.06)}
+  .nav-in{display:flex;align-items:center;justify-content:space-between;padding:14px 22px;max-width:1120px;margin:0 auto}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:1.25rem;color:var(--green-deep);text-decoration:none}
+  .brand img{width:44px;height:44px;border-radius:14px;box-shadow:var(--clay-shadow)}
+  .nav-cta{display:inline-flex;align-items:center;gap:8px;background:var(--green);color:#fff;text-decoration:none;font-weight:800;padding:11px 22px;border-radius:999px;box-shadow:5px 5px 12px rgba(22,163,74,.35);transition:.25s}
+  .nav-cta:hover{transform:translateY(-2px) scale(1.03);box-shadow:7px 9px 18px rgba(22,163,74,.45)}
+
+  .pill{display:inline-flex;align-items:center;gap:8px;background:#fff;border-radius:999px;padding:9px 20px;font-weight:800;font-size:.85rem;color:var(--green-deep);box-shadow:var(--clay-shadow);letter-spacing:.06em}
+  .dot{width:10px;height:10px;border-radius:50%;background:var(--green);animation:pulse 1.6s infinite}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(22,163,74,.45)}60%{box-shadow:0 0 0 9px rgba(22,163,74,0)}}
+
+  h1{font-size:clamp(2.4rem,6vw,4.4rem);line-height:1.06;font-weight:1000;letter-spacing:-.02em;margin:26px 0 8px}
+  h1 .grad{background:linear-gradient(92deg,#16a34a,#84cc16 45%,#f59e0b);-webkit-background-clip:text;background-clip:text;color:transparent;background-size:200% auto;animation:shine 5s linear infinite}
+  @keyframes shine{to{background-position:200% center}}
+  .sub{font-size:clamp(1.02rem,2.1vw,1.25rem);color:#4b5d52;max-width:680px;margin:18px auto 34px;line-height:1.65}
+
+  .cta-row{display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
+  .btn{display:inline-flex;align-items:center;gap:10px;font-weight:900;font-size:1.02rem;text-decoration:none;border-radius:999px;padding:16px 34px;transition:.28s cubic-bezier(.34,1.56,.64,1)}
+  .btn-primary{background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;box-shadow:6px 8px 20px rgba(22,163,74,.4)}
+  .btn-primary:hover{transform:translateY(-4px) scale(1.04)}
+  .btn-ghost{background:#fff;color:var(--green-deep);box-shadow:var(--clay-shadow)}
+  .btn-ghost:hover{transform:translateY(-4px)}
+
+  .chips{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:30px}
+  .chip{background:#fff;border-radius:999px;padding:10px 20px;font-weight:800;font-size:.88rem;box-shadow:var(--clay-shadow);color:#3f5147}
+  .chip b{color:var(--green)}
+
+  /* ---------- demo frame ---------- */
+  .frame{background:#fff;border-radius:34px;padding:14px;box-shadow:var(--clay-shadow), 0 30px 60px rgba(28,43,33,.12);max-width:960px;margin:52px auto 0}
+  .frame img{width:100%;display:block;border-radius:24px}
+  .frame-cap{text-align:center;font-size:.86rem;color:#7a8b80;margin-top:14px;font-weight:700}
+
+  /* ---------- cards ---------- */
+  .grid{display:grid;gap:22px}
+  .g3{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+  .card{background:#fff;border-radius:var(--radius);padding:28px;box-shadow:var(--clay-shadow);transition:.3s cubic-bezier(.34,1.56,.64,1)}
+  .card:hover{transform:translateY(-8px) rotate(-.4deg);box-shadow:10px 14px 30px rgba(28,43,33,.16)}
+  .card .ico{width:58px;height:58px;display:grid;place-items:center;font-size:1.7rem;border-radius:18px;background:linear-gradient(135deg,#ecfdf5,#d1fae5);box-shadow:var(--clay-inset);margin-bottom:16px}
+  .card h3{font-size:1.12rem;font-weight:900;margin-bottom:8px}
+  .card p{color:#5b6c61;font-size:.94rem;line-height:1.6}
+
+  .math{background:linear-gradient(135deg,#14532d,#166534);color:#eafff2;border-radius:34px;padding:44px 34px;box-shadow:0 26px 50px rgba(20,83,45,.35);position:relative;overflow:hidden}
+  .math::before{content:"";position:absolute;width:300px;height:300px;border-radius:50%;background:rgba(132,204,22,.18);top:-140px;right:-80px;filter:blur(10px);animation:drift 12s ease-in-out infinite alternate}
+  .math .line{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:clamp(.85rem,2vw,1.06rem);padding:13px 20px;border-radius:16px;background:rgba(255,255,255,.08);margin:10px 0;border:1px solid rgba(255,255,255,.14);position:relative}
+  .math .line b{color:#bef264}
+  .math h2{color:#fff;font-size:clamp(1.5rem,3.4vw,2.1rem);font-weight:1000;margin-bottom:14px}
+
+  /* ---------- screenshots ---------- */
+  .shot{border-radius:22px;overflow:hidden;box-shadow:var(--clay-shadow);transition:.35s}
+  .shot img{width:100%;display:block;transition:.5s}
+  .shot:hover img{transform:scale(1.04)}
+  .shot figcaption{padding:14px 18px;font-weight:800;font-size:.92rem;background:#fff;display:flex;gap:8px;align-items:center}
+  .shot figcaption span{opacity:.55;font-weight:700;font-size:.8rem}
+
+  h2.sec{font-size:clamp(1.7rem,4vw,2.5rem);font-weight:1000;text-align:center;margin-bottom:10px}
+  .sec-sub{text-align:center;color:#5b6c61;max-width:620px;margin:0 auto 44px;line-height:1.6}
+
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:18px;margin-top:44px}
+  .stat{background:#fff;border-radius:22px;padding:24px 14px;box-shadow:var(--clay-shadow);text-align:center}
+  .stat .n{font-size:2rem;font-weight:1000;color:var(--green)}
+  .stat .l{font-size:.82rem;font-weight:800;color:#7a8b80;letter-spacing:.05em}
+
+  footer{padding:60px 0 46px;text-align:center}
+  .foot-links{display:flex;gap:22px;justify-content:center;flex-wrap:wrap;margin:20px 0}
+  .foot-links a{color:var(--green-deep);font-weight:800;text-decoration:none;border-bottom:2px solid #bbf7d0;transition:.2s}
+  .foot-links a:hover{border-color:var(--green)}
+  .tiny{color:#93a59a;font-size:.85rem;font-weight:700}
+
+  .reveal{opacity:0;transform:translateY(34px);transition:.8s cubic-bezier(.22,1,.36,1)}
+  .reveal.in{opacity:1;transform:none}
+
+  @media (prefers-reduced-motion: reduce){
+    *,*::before,*::after{animation-duration:.001s !important;transition-duration:.001s !important}
+    .reveal{opacity:1;transform:none}
+  }
+  @media (max-width:640px){ .floaty{display:none} section{padding:52px 0} }
+</style>
+</head>
+<body>
+
+<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+<div class="floaty" style="top:16%;left:5%;animation-delay:-1s">🍅</div>
+<div class="floaty" style="top:24%;right:7%;animation-delay:-3s">🥭</div>
+<div class="floaty" style="top:58%;left:3%;animation-delay:-5s">🥬</div>
+<div class="floaty" style="top:66%;right:4%;animation-delay:-2s">🥕</div>
+
+<nav>
+  <div class="nav-in">
+    <a class="brand" href="#"><img src="assets/agrilink-logo.png" alt="AgriLink logo"/>AgriLink</a>
+    <a class="nav-cta" href="https://github.com/arpitnayan123-bot/Agri-link" target="_blank" rel="noopener">⭐ GitHub</a>
+  </div>
+</nav>
+
+<header class="center wrap" style="padding-top:84px">
+  <span class="pill"><span class="dot"></span> HARVESTED TODAY · ZERO CHEMICALS</span>
+  <h1>Farm to your door in hours<br><span class="grad">— not mandis, not months.</span></h1>
+  <p class="sub">AgriLink connects you directly to 7 verified farmers in Maharashtra &amp; Punjab. The moment you pay over UPI, every farmer in your basket is paid <b>instantly</b> — with payout proof printed on your receipt. No middlemen, no cold storage, no chemicals.</p>
+  <div class="cta-row">
+    <a class="btn btn-primary" href="https://github.com/arpitnayan123-bot/Agri-link" target="_blank" rel="noopener">⭐ View the Code</a>
+    <a class="btn btn-ghost" href="#demo">🎬 Watch the Demo</a>
+  </div>
+  <div class="chips">
+    <span class="chip">🛵 At your door in ~2 hrs</span>
+    <span class="chip">⚡ <b>Instant farmer payout</b></span>
+    <span class="chip">✔️ 100% chemical-free</span>
+  </div>
+
+  <div class="frame reveal" id="demo">
+    <img src="assets/demo-agrilink.gif" alt="AgriLink demo — browse, basket, coupon, UPI pay, instant farmer payout proof, live tracking" />
+    <div class="frame-cap">🔁 Full 90-second journey — browse → basket → MANGO20 → UPI pay → instant payout proof → live tracking</div>
+  </div>
+
+  <div class="stats">
+    <div class="stat reveal"><div class="n" data-count="7">0</div><div class="l">VERIFIED FARMERS</div></div>
+    <div class="stat reveal"><div class="n" data-count="22">0</div><div class="l">CHEMICAL-FREE CROPS</div></div>
+    <div class="stat reveal"><div class="n" data-count="18">0</div><div class="l">API ENDPOINTS</div></div>
+    <div class="stat reveal"><div class="n" data-count="94" data-suffix="%">0</div><div class="l">FARMER SHARE</div></div>
+  </div>
+</header>
+
+<section class="wrap">
+  <h2 class="sec reveal">The money is the product.</h2>
+  <p class="sec-sub reveal">Through a mandi chain the farmer keeps 22–35% of your rupee (NABARD 2023). AgriLink flips the flow — fees are paid by the consumer on top, and the farmer's price is never touched.</p>
+  <div class="math reveal">
+    <h2>🧮 The trust math</h2>
+    <div class="line">consumer pays = items + delivery + 8% platform fee − coupons − weekly basket − wallet</div>
+    <div class="line"><b>farmer gets = 100% of items — settled INSTANTLY to their UPI when you pay</b></div>
+    <div class="line"><b>rider gets = 100% of your tip</b></div>
+  </div>
+</section>
+
+<section class="wrap">
+  <h2 class="sec reveal">Everything a quick-commerce app needs.<br>Plus the honesty the giants don't have.</h2>
+  <p class="sec-sub reveal">Built as a single Next.js 16 app with 18 API routes, Prisma + SQLite, and a claymorphism UI in English &amp; हिंदी.</p>
+  <div class="grid g3">
+    <div class="card reveal"><div class="ico">⚡</div><h3>Instant farmer payouts</h3><p>Mock Razorpay X split-payout fires the second you pay. Per-farmer <b>payoutRef + UPI id</b> printed on the receipt and on the tracking timeline.</p></div>
+    <div class="card reveal"><div class="ico">🧾</div><h3>Shareable proof</h3><p>The receipt is shareable as text and downloadable as a PNG — free marketing with every order, confetti included.</p></div>
+    <div class="card reveal"><div class="ico">↩️</div><h3>Honest cancellation</h3><p>Cancel while it's still on the farm: payouts reversed per farmer, stock restored, refund lands in your AgriLink wallet instantly.</p></div>
+    <div class="card reveal"><div class="ico">💰</div><h3>AgriLink wallet</h3><p>Signed ledger for refunds and ₹50 referral credits — spendable at checkout with one toggle.</p></div>
+    <div class="card reveal"><div class="ico">🎟️</div><h3>Coupons & weekly basket</h3><p>One-tap coupon book with min-order gating, plus a −5% weekly-basket subscription you can skip, stop or resume.</p></div>
+    <div class="card reveal"><div class="ico">🛵</div><h3>Delivery scheduling</h3><p>Express ~2h or scheduled windows — scheduled orders genuinely hold until their window opens.</p></div>
+    <div class="card reveal"><div class="ico">🔔</div><h3>Notification center</h3><p>Server-persisted inbox for order milestones, wallet credits and social pings — unread badge and all.</p></div>
+    <div class="card reveal"><div class="ico">🧠</div><h3>AI shopping assistant</h3><p>Grounded in the live catalog — "plan a ₹300 veggie basket" returns real picks with one-tap add-all.</p></div>
+    <div class="card reveal"><div class="ico">🏆</div><h3>Living social proof</h3><p>Farmer leaderboard ranked by real server-counted followers, with lifetime direct-earnings on every storefront.</p></div>
+  </div>
+</section>
+
+<section class="wrap">
+  <h2 class="sec reveal">📸 Inside the app</h2>
+  <p class="sec-sub reveal">Claymorphism + neumorphism, forest-night dark mode, mobile-first down to 390px.</p>
+  <div class="grid g3">
+    <figure class="shot reveal"><img loading="lazy" src="assets/01-market-light.png" alt="AgriLink market home — light mode"/><figcaption>🛒 Market home <span>· light</span></figcaption></figure>
+    <figure class="shot reveal"><img loading="lazy" src="assets/04-market-dark.png" alt="AgriLink dark mode"/><figcaption>🌙 Forest-night <span>· dark</span></figcaption></figure>
+    <figure class="shot reveal"><img loading="lazy" src="assets/02-products.png" alt="AgriLink catalog with freshness rings"/><figcaption>🧺 Freshness-rated catalog <span>· rings</span></figcaption></figure>
+    <figure class="shot reveal"><img loading="lazy" src="assets/05-farmer-sheet.png" alt="AgriLink farmer storefront"/><figcaption>👨‍🌾 Farmer storefront <span>· KYC</span></figcaption></figure>
+    <figure class="shot reveal"><img loading="lazy" src="assets/06-cart.png" alt="AgriLink basket with instant payout preview"/><figcaption>🛍️ Basket w/ payout preview <span>· pre-pay</span></figcaption></figure>
+    <figure class="shot reveal"><img loading="lazy" src="assets/09-receipt.png" alt="AgriLink instant payout receipt with confetti"/><figcaption>🧾 Payout receipt <span>· confetti</span></figcaption></figure>
+    <figure class="shot reveal"><img loading="lazy" src="assets/08-checkout.png" alt="AgriLink delivery scheduling and tip"/><figcaption>📍 Slots & rider tip <span>· checkout</span></figcaption></figure>
+    <figure class="shot reveal"><img loading="lazy" src="assets/10-tracking.png" alt="AgriLink live order tracking with payout pills"/><figcaption>🛵 Live tracking <span>· payout pills</span></figcaption></figure>
+    <figure class="shot reveal"><img loading="lazy" src="assets/11-orders-light.png" alt="AgriLink orders and wallet card"/><figcaption>💰 Orders + wallet <span>· ledger</span></figcaption></figure>
+  </div>
+  <div class="center" style="margin-top:40px">
+    <figure class="shot reveal" style="max-width:340px;margin:0 auto"><img loading="lazy" src="assets/12-mobile.png" alt="AgriLink on mobile at 390px"/><figcaption>📱 Mobile-first <span>· 390px</span></figcaption></figure>
+  </div>
+</section>
+
+<section class="wrap center">
+  <h2 class="sec reveal">Run it in 3 commands.</h2>
+  <p class="sec-sub reveal">Auto-seeds 7 farmers and 22 crops on first request.</p>
+  <div class="math reveal" style="max-width:560px;margin:0 auto;text-align:left">
+    <div class="line">bun install</div>
+    <div class="line">bun run db:push</div>
+    <div class="line">bun run dev <span style="opacity:.6"># → localhost:3000</span></div>
+  </div>
+  <div class="cta-row" style="margin-top:34px">
+    <a class="btn btn-primary" href="https://github.com/arpitnayan123-bot/Agri-link" target="_blank" rel="noopener">⭐ Star on GitHub</a>
+    <a class="btn btn-ghost" href="https://github.com/arpitnayan123-bot/Agri-link/blob/main/README.md" target="_blank" rel="noopener">📖 Full README</a>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <a class="brand center" href="#" style="justify-content:center"><img src="assets/agrilink-logo.png" alt="AgriLink logo"/>AgriLink</a>
+    <p class="sub" style="margin:14px auto 0">🌾 Every rupee finds its farmer.</p>
+    <div class="foot-links">
+      <a href="https://github.com/arpitnayan123-bot/Agri-link" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/arpitnayan123-bot/Agri-link/blob/main/docs/API.md" target="_blank" rel="noopener">API Docs</a>
+      <a href="https://github.com/arpitnayan123-bot/Agri-link/blob/main/worklog.md" target="_blank" rel="noopener">Build Log</a>
+    </div>
+    <p class="tiny">Pilot: Maharashtra × Punjab · payments, AI & WhatsApp updates are demo-simulated and labeled in the UI · fee math, stock & split-payout engine are real code.</p>
+  </div>
+</footer>
+
+<script>
+  // scroll reveals
+  const io = new IntersectionObserver(es => es.forEach(e => e.isIntersecting && e.target.classList.add('in')), {threshold:.12});
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+  // count-up stats
+  const cio = new IntersectionObserver(es => es.forEach(e => {
+    if(!e.isIntersecting) return; cio.unobserve(e.target);
+    const el = e.target, end = +el.dataset.count, suf = el.dataset.suffix || '', t0 = performance.now();
+    const step = t => { const p = Math.min((t - t0)/1400, 1), ease = 1 - Math.pow(1-p, 3);
+      el.textContent = Math.round(end*ease) + suf; if(p < 1) requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+  }), {threshold:.5});
+  document.querySelectorAll('[data-count]').forEach(el => cio.observe(el));
+</script>
+</body>
+</html>
