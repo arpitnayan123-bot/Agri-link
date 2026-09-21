@@ -1,0 +1,409 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+    "name": "AgriLink Bharat MVP API",
+    "description": "AgriLink Bharat — B2B2C agri supply-chain MVP (TPO crops, Maharashtra & Punjab pilot).\n\n## Setup (2 minutes)\n1. Run **Seed** (POST /api/seed?force=1) to (re)seed the demo database.\n2. Run **Get Users (FARMER)** and copy a VERIFIED farmer's `id` into the `farmerId` collection variable. Repeat for BUYER and LOGISTICS roles into `buyerId` / `logisticsId`, and FPO_ADMIN into `fpoAdminId` (IDs are cuids generated at seed time, so they are not stable across reseeds).\n3. Run **Get Listings** and copy a lot `id` into `listingId`.\n4. Create an order (POST /api/orders) and copy the returned `id` into `orderId`; accept + advance it to DRIVER_ASSIGNED, then copy the shipment `id` into `shipmentId`.\n\n## Auth (demo only)\nA collection-level header **x-demo-user: REPLACE_ME** (implemented via Postman collection `apikey` auth) is sent on every request. Replace it with a real user id from Get Users. Honest caveat for the MVP: most routes additionally take explicit actor IDs (`buyerId`, `partnerId`, `farmerId`) in the body and do not yet enforce the header — production replaces this with OIDC (Auth0) at the API gateway.\n\n## Honesty notes\n- AI quality grading is a deterministic heuristic mock (method `AI_VISION_MOCK`).\n- Escrow is simulated Razorpay test-mode semantics — no real funds move.\n- SMS/WhatsApp notifications are DB outbox rows, not real messages.\n- Mandi prices are simulated AgMarkNet-style series.\n\nDocs: `docs/API.md`, `docs/TECH-JUSTIFICATION.md`.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      { "key": "key", "value": "x-demo-user", "type": "string" },
+      { "key": "value", "value": "REPLACE_ME", "type": "string" },
+      { "key": "in", "value": "header", "type": "string" }
+    ]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000", "type": "string" },
+    { "key": "farmerId", "value": "REPLACE_ME", "type": "string" },
+    { "key": "buyerId", "value": "REPLACE_ME", "type": "string" },
+    { "key": "logisticsId", "value": "REPLACE_ME", "type": "string" },
+    { "key": "fpoAdminId", "value": "REPLACE_ME", "type": "string" },
+    { "key": "listingId", "value": "REPLACE_ME", "type": "string" },
+    { "key": "orderId", "value": "REPLACE_ME", "type": "string" },
+    { "key": "shipmentId", "value": "REPLACE_ME", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Setup",
+      "item": [
+        {
+          "name": "Seed",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "x-demo-user", "value": "REPLACE_ME", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/seed?force=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "seed"],
+              "query": [
+                { "key": "force", "value": "1", "description": "1 = wipe & deterministically reseed; omit to seed only if empty" }
+              ]
+            },
+            "description": "Idempotent demo seed: 2 FPOs, 9 farmers (MH/PB), 6 buyers, 3 logistics partners, crop lots, 90-day simulated price series, orders across the lifecycle, SMS/WhatsApp outbox. Safe to re-run with force=1."
+          }
+        },
+        {
+          "name": "Get Users (FARMER)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "x-demo-user", "value": "REPLACE_ME", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users?role=FARMER",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users"],
+              "query": [
+                { "key": "role", "value": "FARMER", "description": "FARMER | BUYER | LOGISTICS | FPO_ADMIN (optional)" }
+              ]
+            },
+            "description": "Demo identity directory. Copy a VERIFIED farmer's `id` into {{farmerId}} (repeat with role=BUYER / LOGISTICS / FPO_ADMIN for the other variables)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Marketplace",
+      "item": [
+        {
+          "name": "Get Listings",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "x-demo-user", "value": "REPLACE_ME", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/listings?crop=TOMATO",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "listings"],
+              "query": [
+                { "key": "crop", "value": "TOMATO", "description": "TOMATO | POTATO | ONION (optional)", "disabled": true },
+                { "key": "state", "value": "Maharashtra", "disabled": true },
+                { "key": "grade", "value": "A", "disabled": true },
+                { "key": "maxPrice", "value": "1500", "disabled": true },
+                { "key": "q", "value": "Nashik", "description": "village/variety/district contains", "disabled": true },
+                { "key": "sort", "value": "newest", "description": "newest | price | qty", "disabled": true }
+              ]
+            },
+            "description": "Marketplace search. Returns lots with farmer card, quality cert, open quotes, computed bestQuoteRs and mandiAvgRs (max 100 rows). Copy a lot `id` into {{listingId}}."
+          }
+        },
+        {
+          "name": "Get Listing Detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "x-demo-user", "value": "REPLACE_ME", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/listings/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "listings", ":id"],
+              "variable": [
+                { "key": "id", "value": "{{listingId}}", "description": "Listing cuid" }
+              ]
+            },
+            "description": "Lot detail: farmer, quality certificate, all quotes with buyer orgs, farm, mandiAvgRs and the 90-day price series for the crop."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Negotiation & Orders",
+      "item": [
+        {
+          "name": "Create Quote",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "content-type", "value": "application/json", "type": "text" },
+              { "key": "x-demo-user", "value": "REPLACE_ME", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"listingId\": \"{{listingId}}\",\n  \"buyerId\": \"{{buyerId}}\",\n  \"priceRs\": 1450,\n  \"quantityQt\": 40,\n  \"note\": \"Can pick up within 48 hours\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/quotes",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "quotes"]
+            },
+            "description": "Buyer places a price quote on a LISTED lot. Quote expires in 2h; buyer's older OPEN quotes on the lot are SUPERSEDED. Farmer gets an SMS outbox row; emits quote:new."
+          }
+        },
+        {
+          "name": "Create Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "content-type", "value": "application/json", "type": "text" },
+              { "key": "x-demo-user", "value": "REPLACE_ME", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"buyerId\": \"{{buyerId}}\",\n  \"items\": [\n    { \"listingId\": \"{{listingId}}\", \"quantityQt\": 40 }\n  ],\n  \"deliveryCity\": \"Mumbai\",\n  \"deliveryAddress\": \"APMC Market, Sector 19, Vashi\",\n  \"neededBy\": \"2025-12-31\",\n  \"notes\": \"Handle gently — retail Grade A preferred\",\n  \"method\": \"UPI\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders"]
+            },
+            "description": "Buyer creates an order (cart → checkout). Line price = buyer's best OPEN quote else lot ask. Lots → BOOKED, a Payment row (escrow PENDING) is created. Copy the returned `id` into {{orderId}}. Emits order:new."
+          }
+        },
+        {
+          "name": "Get Order Detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "x-demo-user", "value": "REPLACE_ME", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders", ":id"],
+              "variable": [
+                { "key": "id", "value": "{{orderId}}", "description": "Order cuid OR human code e.g. ALB-ORD-10007" }
+              ]
+            },
+            "description": "Full order detail: buyer, items (with farmer + quality cert), payment (escrow state), shipment with checkpoints, event timeline."
+          }
+        },
+        {
+          "name": "Advance Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "x-demo-user", "value": "REPLACE_ME", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/:id/advance",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders", ":id", "advance"],
+              "variable": [
+                { "key": "id", "value": "{{orderId}}", "description": "Order cuid OR code" }
+              ]
+            },
+            "description": "Walks the lifecycle one step: PLACED → CONFIRMED → ESCROW_HELD (payment HELD, Razorpay-test semantics) → DRIVER_ASSIGNED (shipment auto-created) → PICKED_UP → IN_TRANSIT → DELIVERED → QUALITY_VERIFIED → SETTLED (escrow released, 2% fee, GST invoice no). Emits order:status."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Logistics",
+      "item": [
+        {
+          "name": "Get Shipments",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "x-demo-user", "value": "REPLACE_ME", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/shipments",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "shipments"],
+              "query": [
+                { "key": "partnerId", "value": "{{logisticsId}}", "disabled": true },
+                { "key": "status", "value": "ASSIGNED,IN_TRANSIT", "description": "PENDING | ASSIGNED | PICKED_UP | IN_TRANSIT | DELIVERED", "disabled": true }
+              ]
+            },
+            "description": "Open loads & active trips with telemetry (progressPct, etaMin, tempC, humidity, tempBreaches), last checkpoint and indicative distanceKm. Copy an unassigned PENDING shipment `id` into {{shipmentId}}."
+          }
+        },
+        {
+          "name": "Accept Load",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "content-type", "value": "application/json", "type": "text" },
+              { "key": "x-demo-user", "value": "REPLACE_ME", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"partnerId\": \"{{logisticsId}}\",\n  \"vehicleNo\": \"MH12 GT 4821\",\n  \"vehicleType\": \"REEFER_9T\",\n  \"driverName\": \"Deepak Chavan\",\n  \"driverPhone\": \"+91983000300\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/shipments/:id/accept",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "shipments", ":id", "accept"],
+              "variable": [
+                { "key": "id", "value": "{{shipmentId}}", "description": "Shipment cuid" }
+              ]
+            },
+            "description": "LOGISTICS partner accepts an open load → shipment ASSIGNED; order advances ESCROW_HELD → DRIVER_ASSIGNED. Emits order:status + shipment:assigned."
+          }
+        },
+        {
+          "name": "Ping Shipment (GPS + telemetry)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "x-demo-user", "value": "REPLACE_ME", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/shipments/:id/ping",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "shipments", ":id", "ping"],
+              "variable": [
+                { "key": "id", "value": "{{shipmentId}}", "description": "Shipment cuid" }
+              ]
+            },
+            "description": "Simulated vehicle ping: advances progress ~12–20%, records a named checkpoint, simulates temp/humidity (cold-chain breach alert above 8°C), auto-advances PICKED_UP→IN_TRANSIT and auto-delivers the order at 100%. Emits shipment:ping."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Quality & Prices",
+      "item": [
+        {
+          "name": "Grade Lot (mock AI)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "content-type", "value": "application/json", "type": "text" },
+              { "key": "x-demo-user", "value": "REPLACE_ME", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"listingId\": \"{{listingId}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/quality",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "quality"]
+            },
+            "description": "MOCK AI vision grading — deterministic heuristic on crop/variety/organic. Returns QualityReport (grade A/B/C/REJECT, confidence, firmness, defects, shelfLifeD, certNo ALB-QC-xxxx, method AI_VISION_MOCK). Emits quality:graded."
+          }
+        },
+        {
+          "name": "Get Prices",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "x-demo-user", "value": "REPLACE_ME", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/prices?crop=TOMATO",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "prices"],
+              "query": [
+                { "key": "crop", "value": "TOMATO", "description": "TOMATO | POTATO | ONION (default TOMATO)" }
+              ]
+            },
+            "description": "90-day mandi vs platform series + 7-day naive forecast + mandi average. source field honestly reports: AgMarkNet (simulated)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin & Misc",
+      "item": [
+        {
+          "name": "Get Analytics (KPIs)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "x-demo-user", "value": "REPLACE_ME", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics"]
+            },
+            "description": "FPO/admin pilot KPIs: totals (GMV settled, escrow held, fulfillment %, loss-reduction model, temp breaches), ordersByStatus, 8-week GMV trend, crop mix, KYC queue."
+          }
+        },
+        {
+          "name": "Get Notifications (SMS/WhatsApp outbox)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "x-demo-user", "value": "REPLACE_ME", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications?userId={{farmerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications"],
+              "query": [
+                { "key": "userId", "value": "{{farmerId}}" }
+              ]
+            },
+            "description": "Simulated SMS/WhatsApp outbox for a user (latest 40 rows). No real messages are sent — this proves the async comms design."
+          }
+        },
+        {
+          "name": "Mark Notifications Read",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "content-type", "value": "application/json", "type": "text" },
+              { "key": "x-demo-user", "value": "REPLACE_ME", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{farmerId}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications"]
+            },
+            "description": "Marks all unread notifications read for the user."
+          }
+        },
+        {
+          "name": "Update KYC (FPO admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "content-type", "value": "application/json", "type": "text" },
+              { "key": "x-demo-user", "value": "REPLACE_ME", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{farmerId}}\",\n  \"kycStatus\": \"VERIFIED\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/kyc",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "kyc"]
+            },
+            "description": "FPO admin verifies/rejects farmer KYC (VERIFIED | PENDING | REJECTED). VERIFIED unlocks List Harvest. Sends SMS outbox row; emits kyc:update."
+          }
+        },
+        {
+          "name": "Advisor (AI price advice)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "content-type", "value": "application/json", "type": "text" },
+              { "key": "x-demo-user", "value": "REPLACE_ME", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"crop\": \"TOMATO\",\n  \"basePriceRs\": 1400\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/advisor",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "advisor"]
+            },
+            "description": "Negotiation advisor: z-ai LLM (server-side) with graceful deterministic heuristic fallback. Returns {source: llm|heuristic, verdict: STRONG_LIST|FAIR_LIST|HOLD, advice, talkingPoints}."
+          }
+        }
+      ]
+    }
+  ]
+}

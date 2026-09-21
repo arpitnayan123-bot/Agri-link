@@ -1,0 +1,194 @@
+// AgriLink — farmer-direct quick commerce (India pilot)
+// Product-first catalog à la Blinkit/Zepto, but every rupee flows to the farmer.
+// SQLite for the sandbox prototype; production target is PostgreSQL (see /docs).
+//
+// Design principles:
+//  - The FARMER is the hero entity; products carry the farmer's identity.
+//  - NO ESCROW: on payment, EVERY farmer in the cart is paid INSTANTLY
+//    (mock Razorpay X payout, one payoutRef per farmer, stored on OrderItem).
+//  - Honest fee math: farmer's price is never touched. Platform 8% + delivery.
+//  - Freshness is alive: harvestedAt drives a decaying AI freshness score in the UI.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Farmers (verified pilot cohort: Maharashtra + Punjab) ───────────────────
+
+model Farmer {
+  id            String      @id @default(cuid())
+  name          String
+  phone         String      @unique // +91XXXXXXXXXX (WhatsApp OTP in prod)
+  village       String
+  district      String
+  state         String
+  avatar        String // emoji avatar for premium clay cards
+  story         String // "Meet your farmer" — first person, honest
+  storyHi       String
+  upiId         String // instant settlement destination
+  kycVerified   Boolean     @default(true) // Aadhaar OTP + liveness (mock)
+  rating        Float       @default(4.9)
+  totalEarnedRs Float       @default(0) // lifetime direct earnings
+  followers     Int         @default(0) // buyer hearts — server-counted so every visitor sees real social proof
+  joinedAt      DateTime    @default(now())
+  products      Product[]
+  orderItems    OrderItem[]
+}
+
+// ─── Products: what the consumer taps ADD on ─────────────────────────────────
+
+model Product {
+  id            String      @id @default(cuid())
+  name          String
+  nameHi        String
+  category      String // VEGETABLES | FRUITS | LEAFY | HERBS
+  emoji         String
+  description   String
+  descriptionHi String
+  unitLabel     String // "500 g", "1 kg", "2 pcs"
+  priceRs       Float // farmer's direct price — never touched by fees
+  mrpRs         Float // typical supermarket/supermarket-app price
+  mandiPriceRs  Float // what middlemen pay the farmer for the same lot
+  farmerId      String
+  farmer        Farmer      @relation(fields: [farmerId], references: [id])
+  chemicalFree  Boolean     @default(true)
+  harvestedAt   DateTime // drives the live AI freshness score (decays hourly)
+  stockKg       Float
+  tags          String // JSON string array: ["No pesticides", "Hand-picked"]
+  isBestseller  Boolean     @default(false)
+  rating        Float       @default(4.8)
+  accent        String // pastel accent key for the clay card (tomato|amber|emerald|...)
+  orderItems    OrderItem[]
+  reviews       Review[]
+  createdAt     DateTime    @default(now())
+
+  @@index([category])
+}
+
+// ─── Reviews: real buyer reviews + seeded community reviews ──────────────────
+// BUYER reviews come from the "Rate your harvest" flow; SEED reviews make the
+// demo feel alive. The blended rating shown in UI weights buyers heavily.
+
+model Review {
+  id         String   @id @default(cuid())
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id])
+  buyerPhone String? // links a BUYER review to the order identity (mock OTP)
+  name       String
+  rating     Float // 1..5 in 0.5 steps
+  comment    String
+  lang       String   @default("en") // language the review was written in
+  source     String   @default("BUYER") // BUYER | SEED
+  orderCode  String? // AL-XXXXX when submitted from a delivered order
+  createdAt  DateTime @default(now())
+
+  @@index([productId, createdAt])
+}
+
+// ─── Orders: one UPI payment → instant split-payout to every farmer ─────────
+
+model Order {
+  id             String      @id @default(cuid())
+  code           String      @unique // AL-10001
+  buyerName      String
+  buyerPhone     String // WhatsApp OTP identity (mock)
+  buyerCity      String
+  address        String
+  itemsTotalRs   Float // Σ unitPrice × qty — 100% of this goes to farmers
+  discountRs     Float    @default(0) // promo discount (platform-subsidized, farmer payout untouched)
+  promoCode      String?
+  deliveryFeeRs  Float // ₹29, free above ₹249
+  platformFeeRs  Float // 8% of itemsTotal — keeps the lights on, disclosed
+  tipRs          Float    @default(0) // 100% passes to the delivery partner
+  walletUsedRs   Float    @default(0) // AgriLink wallet balance applied at checkout
+  totalRs        Float // what the consumer pays (after discounts + wallet)
+  farmerPayoutRs Float // = itemsTotalRs — settled instantly, per farmer
+  upiRef         String? // consumer UPI txn ref (mock)
+  status         String      @default("PAID") // PAID | PACKED | OUT_FOR_DELIVERY | DELIVERED | CANCELLED
+  slotKey        String      @default("EXPRESS") // EXPRESS | TODAY_EVE | TODAY_NIGHT | TMR_MORN | TMR_EVE (UI resolves to localized label)
+  etaMin         Int         @default(120) // "at your door in ~2 hrs"
+  subscription   String? // null | 'WEEKLY' — weekly basket subscription (5% off every week, platform-subsidized)
+  nextDeliveryAt DateTime? // for subscriptions: when the next basket harvest begins (demo: +7 days)
+  // Cancellation (only before OUT_FOR_DELIVERY): Razorpay-X-mock payout
+  // reversals per farmer + instant refund into the buyer's AgriLink wallet.
+  cancelReason   String?
+  cancelledAt    DateTime?
+  refundRs       Float    @default(0) // credited to wallet on cancellation
+  refundRef      String?
+  // Post-delivery issue reporting ("Report a problem")
+  issueReason    String?
+  issueStatus    String? // OPEN | RESOLVED
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  items          OrderItem[]
+
+  @@index([buyerPhone, createdAt])
+}
+
+model OrderItem {
+  id             String   @id @default(cuid())
+  orderId        String
+  order          Order    @relation(fields: [orderId], references: [id])
+  productId      String
+  product        Product  @relation(fields: [productId], references: [id])
+  farmerId       String
+  farmer         Farmer   @relation(fields: [farmerId], references: [id])
+  name           String // snapshot at purchase time
+  emoji          String
+  unitLabel      String
+  qty            Int
+  unitPriceRs    Float
+  farmerPayoutRs Float // unitPriceRs × qty — instantly paid to this farmer
+  payoutRef      String? // Razorpay X payout id (mock) — proof of instant settlement
+}
+
+// ─── AgriLink wallet: refunds + referral earnings, spendable at checkout ────
+// amountRs is SIGNED: + credit (WELCOME/REFERRAL/REFUND), − spend (SPEND).
+// Balance = Σ amountRs. The farmer's money never passes through this wallet.
+
+model WalletTx {
+  id        String   @id @default(cuid())
+  phone     String // buyer identity (mock OTP)
+  type      String // WELCOME | REFERRAL | REFUND | SPEND
+  amountRs  Float // signed
+  note      String
+  ref       String? // refundRef / order code / referral code
+  createdAt DateTime @default(now())
+
+  @@index([phone, createdAt])
+}
+
+// ─── In-app notification center (bell) — order milestones, wallet, social ──
+
+model Notification {
+  id        String    @id @default(cuid())
+  phone     String
+  kind      String // ORDER | WALLET | SOCIAL | SYSTEM
+  icon      String   @default("🔔")
+  title     String
+  body      String
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([phone, createdAt])
+}
+
+// ─── Saved addresses — pick at checkout instead of retyping ─────────────────
+
+model Address {
+  id        String   @id @default(cuid())
+  phone     String
+  label     String // Home | Work | Other
+  receiver  String
+  line      String
+  city      String
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([phone])
+}

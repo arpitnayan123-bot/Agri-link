@@ -1,0 +1,28 @@
+{
+  "name": "AgriLink — Farm to door in hours",
+  "short_name": "AgriLink",
+  "description": "Farmer-direct quick commerce: fresh, chemical-free produce from verified farms, delivered in ~2 hours. Every farmer paid instantly over UPI.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FFFBF2",
+  "theme_color": "#17a24f",
+  "lang": "en-IN",
+  "categories": ["shopping", "food"],
+  "icons": [
+    {
+      "src": "/agrilink-logo.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/agrilink-logo.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

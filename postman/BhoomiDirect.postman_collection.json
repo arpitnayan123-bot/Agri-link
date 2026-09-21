@@ -1,0 +1,327 @@
+{
+  "info": {
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "name": "BhoomiDirect API",
+    "description": "BhoomiDirect — zero-middleman farm-to-consumer living haat (MVP backend, Next.js 16 API routes).\n\nEvery response uses the envelope { ok: true, data } or { ok: false, error }.\n\nIMPORTANT — IDs: all entities use Prisma cuid() ids (e.g. cmh8x2…). They are generated at seed time, so run **List Farms** and **List Skills** first and copy real ids into the collection variables {{farmId}}, {{orderId}}, {{listingId}}, {{skillId}}, {{farmerId}} (Collection → Edit → Variables), or paste them into request bodies.\n\nAuth: none (demo). Farmer actions trust farmerId/farmId; consumer identity is buyerPhone (+91XXXXXXXXXX).\n\nSeed data: 5 farmers (MH/PB) × 1 farm each (TOMATO, ONION, POTATO, SPINACH, MANGO), 8 KVK skills, 9 mandi prices, 2 demo orders. Auto-seeds on first request; POST Seed to force a full reseed."
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "farmId",
+      "value": "REPLACE_WITH_REAL_FARM_CUID"
+    },
+    {
+      "key": "listingId",
+      "value": "REPLACE_WITH_REAL_LISTING_CUID"
+    },
+    {
+      "key": "orderId",
+      "value": "REPLACE_WITH_REAL_ORDER_CUID"
+    },
+    {
+      "key": "skillId",
+      "value": "REPLACE_WITH_REAL_SKILL_CUID"
+    },
+    {
+      "key": "farmerId",
+      "value": "REPLACE_WITH_REAL_FARMER_CUID"
+    },
+    {
+      "key": "buyerPhone",
+      "value": "+919812345001"
+    }
+  ],
+  "item": [
+    {
+      "name": "Setup",
+      "description": "Liveness and deterministic seed. The app also auto-seeds on the first request to any data endpoint.",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "health"]
+            },
+            "description": "GET /api/health — liveness + farmer/farm row counts. Does NOT auto-seed. Response: { ok: true, data: { status: 'healthy', farmers, farms, time } }."
+          }
+        },
+        {
+          "name": "Seed (full reseed)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/seed",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "seed"]
+            },
+            "description": "POST /api/seed — drops all BhoomiDirect data and replays the deterministic pilot (5 farmers, 5 farms with BhoomiChain logs, 8 skills, 9 mandi prices, 2 demo orders). Response: { seeded: true, farmers, farms, chainLogs }. Note: re-seeding regenerates ALL cuids — re-copy ids afterwards. A GET on this path returns 405."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Farms",
+      "description": "The living haat. Run **List Farms first** and copy a real farm id (and its listing id) into {{farmId}} / {{listingId}}.",
+      "item": [
+        {
+          "name": "List Farms",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/farms?crop=TOMATO&state=Maharashtra&organic=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "farms"],
+              "query": [
+                {
+                  "key": "crop",
+                  "value": "TOMATO",
+                  "description": "TOMATO | SPINACH | ONION | POTATO | MANGO (ALL = no filter). Remove the param for all crops."
+                },
+                {
+                  "key": "state",
+                  "value": "Maharashtra",
+                  "description": "Maharashtra | Punjab (exact match on farmer state)."
+                },
+                {
+                  "key": "organic",
+                  "value": "true",
+                  "description": "Only the literal 'true' filters; anything else = no filter."
+                }
+              ]
+            },
+            "description": "GET /api/farms — every living farm with growth stage, NDVI, farmer identity, 1:1 listing and latest chain log, ordered by NDVI desc. COPY a farm id into {{farmId}} and its listing.id into {{listingId}} for later requests. Query examples: ?crop=MANGO · ?state=Punjab · ?organic=true · ?crop=TOMATO&state=Maharashtra&organic=true."
+          }
+        },
+        {
+          "name": "Get Farm Detail",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/farms/{{farmId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "farms", "{{farmId}}"]
+            },
+            "description": "GET /api/farms/:id — full living-field dossier: farm + FULL farmer object + listing + complete BhoomiChain log chain + chain verification ({ valid, brokenAt? }) + matching skill cards. Demo note: response includes farmer phone/upiId/aadhaarHash (trim before production — see docs/RISK-REGISTER.md R6)."
+          }
+        },
+        {
+          "name": "Advance Farm 48h",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/farms/{{farmId}}/advance",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "farms", "{{farmId}}", "advance"]
+            },
+            "description": "POST /api/farms/:id/advance — simulates the 48h ISRO Bhuvan NDVI update (mock feed). NDVI rises, stage is recomputed (SEED → SPROUT → VEGETATIVE → FLOWERING → FRUITING → HARVEST_READY), a STAGE_ADVANCE log is hashed onto the farm's BhoomiChain. Response: { farm, log, stageChanged }. Errors if the farm is already HARVEST_READY. Call it repeatedly to grow the field. No body required."
+          }
+        },
+        {
+          "name": "Add Farm Log",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/farms/{{farmId}}/logs",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "farms", "{{farmId}}", "logs"]
+            },
+            "description": "POST /api/farms/:id/logs — farmer records a field activity; hashed onto the farm's BhoomiChain (sha256(prevHash|farmId|activity|note|ISO-at), '0x'-prefixed). activity must be one of: IRRIGATION, SPRAY, FERTILIZE, WEEDING, SCOUTING, HARVEST (PLANT/STAGE_ADVANCE are system-generated). HARVEST forces stage=HARVEST_READY + ndvi 0.85, making the listing sellable. note is truncated to 280 chars."
+          },
+          "response": []
+        },
+        {
+          "name": "Mandi Prices",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/mandi-prices?crop=ONION",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "mandi-prices"],
+              "query": [
+                {
+                  "key": "crop",
+                  "value": "ONION",
+                  "description": "Optional. Crop key or ALL/absent for all. Seeded: 9 Agmarknet-mock rows."
+                }
+              ]
+            },
+            "description": "GET /api/mandi-prices — Agmarknet-mock reference prices with 7-day trend chips (trendPct). Shown next to the farmer's direct price for honesty; used as the mandi-delta baseline in the farmer dashboard."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "description": "Zero-middleman purchase flow. Run **List Farms first** — {{listingId}} must come from a real listing (ids are seeded cuids). Orders auto-create PAID_TO_FARMER + LOGISTICS_ASSIGNED events.",
+      "item": [
+        {
+          "name": "Create Order (instant payout)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"listingId\": \"{{listingId}}\",\n  \"buyerName\": \"Anjali Deshpande\",\n  \"buyerPhone\": \"+919812345001\",\n  \"buyerCity\": \"Pune\",\n  \"address\": \"B-402, Sahyadri Residency, Kothrud, Pune 411038\",\n  \"quantityKg\": 3,\n  \"skillWatched\": true,\n  \"skillBadge\": \"FRESH_KEEPER\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders"]
+            },
+            "description": "POST /api/orders — THE flow: validate → transparent split → mock consumer UPI charge → INSTANT mock Razorpay X payout to the farmer's UPI (status PAID_TO_FARMER on creation) → Shadowfax Rural AWB. Response contains the payout proof: data.payout = { id, utr, mode: 'UPI', settledTo: farmer VPA, settledAt } (id is stored as order.payoutRef; utr appears in the PAID_TO_FARMER event note) plus data.order (code BD-ORD-00xx, full fee breakdown) and a human message.\n\nMath: total = goods + 15% platform + 1.5% UPI + max(35, qty×(MANGO?5:2.5)) − 5% cashback (if skillWatched). farmerPayoutRs = goodsRs — the farmer's price is never touched by fees.\n\nValidation: buyerPhone must match +91XXXXXXXXXX; quantityKg ≥ 0.5 and ≤ stock; listing must be active. COPY listingId from List Farms."
+          }
+        },
+        {
+          "name": "List Orders",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/orders?phone=%2B919812345001",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders"],
+              "query": [
+                {
+                  "key": "phone",
+                  "value": "+919812345001",
+                  "description": "Optional buyer-phone filter (URL-encode the + as %2B in some clients). Without it: latest 50 orders."
+                }
+              ]
+            },
+            "description": "GET /api/orders — buyer order book (newest first, max 50) with farmer, listing+farm snapshot and the full OrderEvent timeline. COPY an order id into {{orderId}}. The phone is the consumer identity (WhatsApp OTP in prod)."
+          }
+        },
+        {
+          "name": "Get Order",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{orderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders", "{{orderId}}"]
+            },
+            "description": "GET /api/orders/:id — order with payout proof (payoutRef, payoutAt, upiRef), farmer + listing/farm snapshot (ndvi, stage) and the full event timeline including the instant-payout note with UTR."
+          }
+        },
+        {
+          "name": "Advance Order",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{orderId}}/advance",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders", "{{orderId}}", "advance"]
+            },
+            "description": "POST /api/orders/:id/advance — state machine, strictly sequential: PAID_TO_FARMER → LOGISTICS_ASSIGNED → OUT_FOR_DELIVERY → DELIVERED. Appends an OrderEvent with a canned note each step. Errors with 'Order already delivered' at the terminal state. No body required."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Skills",
+      "description": "Learn & Earn (KVK micro-lessons). Run **List Skills first** and copy a real skill id into {{skillId}}.",
+      "item": [
+        {
+          "name": "Get Skills",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/skills?crop=TOMATO",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "skills"],
+              "query": [
+                {
+                  "key": "crop",
+                  "value": "TOMATO",
+                  "description": "Optional. Returns the crop's cards plus GENERAL cards; ALL/absent = everything. (lang param from the route index is not implemented yet.)"
+                }
+              ]
+            },
+            "description": "GET /api/skills — Learn & Earn catalogue: crop, title/titleHi, summary/summaryHi, videoUrl (kvk:// placeholder), durationMin, badge (SOIL_HEALTH_SCOUT | PEST_WARRIOR | WATER_WIZARD | FRESH_KEEPER | RIPENESS_PRO), cashbackPct (5, platform-subsidized), provider (KVK), lang, _count.watches. COPY a skill id into {{skillId}}."
+          }
+        },
+        {
+          "name": "Watch Skill",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"skillId\": \"{{skillId}}\",\n  \"buyerRef\": \"+919812345001\",\n  \"unitPrice\": 42\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/skills/watch",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "skills", "watch"]
+            },
+            "description": "POST /api/skills/watch — records a watch (deduped per skillId+buyerRef; repeats return alreadyWatched: true), unlocks the badge and quotes the 5% platform-subsidized cashback (cashbackRs = unitPrice × cashbackPct / 100 — a per-kg quote; the actual cashback at checkout is 5% of the full goods value). buyerRef = demo consumer identity (phone). Then set skillWatched: true on Create Order to apply it."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Farmer",
+      "description": "Farmer profit view. Run **List Farms** first and copy farmer.id into {{farmerId}} (ids are seeded cuids).",
+      "item": [
+        {
+          "name": "Farmer Dashboard",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/farmer/dashboard?farmerId={{farmerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "farmer", "dashboard"],
+              "query": [
+                {
+                  "key": "farmerId",
+                  "value": "{{farmerId}}",
+                  "description": "Optional — omit to get the earliest-joined seed farmer."
+                }
+              ]
+            },
+            "description": "GET /api/farmer/dashboard — profit-maximization view: lifetimeDirectRs (totalEarnedRs, settled instantly), upliftVsMandiPct (direct vs mandi-equivalent on the same quantities), farmerShareOfConsumerRs, feeModel note ('fees are paid by consumers on top — farmer price never touched'), farms with 3 latest chain logs, latest 10 orders."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Stats",
+      "description": "Living-haat ticker.",
+      "item": [
+        {
+          "name": "Stats",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "stats"]
+            },
+            "description": "GET /api/stats — farmers, farms, growing vs harvestReady, chainLogs count, paidToFarmersRs (sum of lifetime farmer earnings) and the 8 most recent orders (code, crop, city, qtyKg, farmerPaidRs, status)."
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,580 @@
+{
+  "info": {
+    "name": "AgriLink v2 — farmer-direct quick commerce",
+    "description": "API tour for AgriLink: catalog → instant split-payout orders → AI assistant. Every order POST returns per-farmer payout proofs. AI chat is budget-aware and returns structured picks.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "phone",
+      "value": "9876543210"
+    },
+    {
+      "key": "productId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "0. Index",
+      "request": {
+        "method": "GET",
+        "url": "{{base}}/api"
+      }
+    },
+    {
+      "name": "1. Health",
+      "request": {
+        "method": "GET",
+        "url": "{{base}}/api/health"
+      }
+    },
+    {
+      "name": "2. Seed (force reseed)",
+      "request": {
+        "method": "POST",
+        "url": "{{base}}/api/seed"
+      }
+    },
+    {
+      "name": "3. Products — all",
+      "request": {
+        "method": "GET",
+        "url": "{{base}}/api/products"
+      }
+    },
+    {
+      "name": "4. Products — filter (category + q)",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base}}/api/products?category=VEGETABLES&q=tomato",
+          "host": [
+            "{{base}}"
+          ],
+          "path": [
+            "api",
+            "products"
+          ],
+          "query": [
+            {
+              "key": "category",
+              "value": "VEGETABLES"
+            },
+            {
+              "key": "q",
+              "value": "tomato"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "5. Products — AI recs for basket",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base}}/api/products?recs={{productId}}",
+          "host": [
+            "{{base}}"
+          ],
+          "path": [
+            "api",
+            "products"
+          ],
+          "query": [
+            {
+              "key": "recs",
+              "value": "{{productId}}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "6. Stats",
+      "request": {
+        "method": "GET",
+        "url": "{{base}}/api/stats"
+      }
+    },
+    {
+      "name": "7. Orders — place (instant per-farmer payout)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"buyerName\": \"Anjali Sharma\",\n  \"buyerPhone\": \"{{phone}}\",\n  \"buyerCity\": \"Pune\",\n  \"address\": \"Flat 402, Kalyani Nagar, Pune 411006\",\n  \"promoCode\": \"MANGO20\",\n  \"slotKey\": \"EXPRESS\",\n  \"subscription\": \"WEEKLY\",\n  \"items\": [\n    {\n      \"productId\": \"REPLACE_ME\",\n      \"qty\": 1\n    }\n  ],\n  \"tipRs\": 20,\n  \"useWallet\": true\n}"
+        },
+        "url": "{{base}}/api/orders",
+        "description": "The zero-middleman moment: stock check -> mock UPI -> INSTANT per-farmer payout -> stock decrement. Optional: slotKey (whitelisted), subscription WEEKLY, tipRs (0/10/20/30/50, 100% to rider), useWallet (spend wallet balance), coupon book FRESH10/SABZI50/MANGO20 (min-order enforced). Also writes an in-app notification."
+      }
+    },
+    {
+      "name": "8. Orders — list (auto-advances lifecycle)",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base}}/api/orders?phone={{phone}}",
+          "host": [
+            "{{base}}"
+          ],
+          "path": [
+            "api",
+            "orders"
+          ],
+          "query": [
+            {
+              "key": "phone",
+              "value": "{{phone}}"
+            }
+          ]
+        },
+        "description": "GET auto-advances PAID → PACKED → OUT_FOR_DELIVERY → DELIVERED on the demo clock (150s/stage, DB-persisted) and returns nextStageInMin for live countdowns."
+      }
+    },
+    {
+      "name": "9. AI chat — budget-aware basket (returns picks[])",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"messages\": [\n    { \"role\": \"user\", \"content\": \"high vitamin C fruits under 100\" }\n  ]\n}"
+        },
+        "url": "{{base}}/api/ai/chat",
+        "description": "Grounded in the live catalog. Server parses budget (₹X / under X / X mein), drops over-budget picks, returns { reply, picks: [{id,name,emoji,priceRs,farmerName}], source }. picks feed the UI's one-tap 'Add all to basket'."
+      }
+    },
+    {
+      "name": "10. AI chat — recipe",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"messages\": [\n    { \"role\": \"user\", \"content\": \"Plan a ₹300 veggie basket\" }\n  ]\n}"
+        },
+        "url": "{{base}}/api/ai/chat"
+      }
+    },
+    {
+      "name": "11. AI search — natural language",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"q\": \"something leafy for a salad\"\n}"
+        },
+        "url": "{{base}}/api/ai/search"
+      }
+    },
+    {
+      "name": "12. Reviews — list (blended avg)",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base}}/api/reviews?productId={{productId}}",
+          "host": [
+            "{{base}}"
+          ],
+          "path": [
+            "api",
+            "reviews"
+          ],
+          "query": [
+            {
+              "key": "productId",
+              "value": "{{productId}}"
+            }
+          ]
+        },
+        "description": "BUYER reviews first, then SEED. Returns { reviews, count, buyerCount, avg (blended: base x8 + buyers)."
+      }
+    },
+    {
+      "name": "13. Reviews — create (buyer)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"name\": \"Anjali Sharma\",\n  \"rating\": 5,\n  \"comment\": \"Harvest-fresh, packed with care!\",\n  \"buyerPhone\": \"9876543210\",\n  \"lang\": \"en\"\n}"
+        },
+        "description": "Validated: name 2-40, rating 1-5 (0.5 steps), comment 3-500. source=BUYER; add orderCode for Verified buyer badge."
+      }
+    },
+    {
+      "name": "14. Farmers — follow (server-counted)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"farmerId\": \"{{farmerId}}\",\n  \"follow\": true\n}"
+        },
+        "description": "Global follower counter on Farmer.followers. follow:false decrements (floored at 0). Returns { farmerId, followers, following }. Seed {{farmerId}} from any /api/products response (items[].farmer.id). Test: pm.response.to.have.status(200)."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"followers is number\", () => pm.expect(typeof pm.response.json().followers).to.eql('number'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "15. Order — cancel (payout reversals + wallet refund)",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{base}}/api/orders/{{orderCode}}",
+          "host": [
+            "{{base}}"
+          ],
+          "path": [
+            "api",
+            "orders",
+            "{{orderCode}}"
+          ]
+        },
+        "description": "Cancel while PAID/PACKED. Reverses every farmer payout (rev_ refs), restores stock, refunds the full paid amount into the AgriLink wallet instantly (WalletTx REFUND + notification). 409 once OUT_FOR_DELIVERY or already cancelled.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"action\": \"CANCEL\",\n  \"reason\": \"Ordered by mistake\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ]
+      }
+    },
+    {
+      "name": "16. Order — report issue (delivered)",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{base}}/api/orders/{{orderCode}}",
+          "host": [
+            "{{base}}"
+          ],
+          "path": [
+            "api",
+            "orders",
+            "{{orderCode}}"
+          ]
+        },
+        "description": "Delivered orders only: stores issueReason + issueStatus OPEN, writes a support notification.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"action\": \"ISSUE\",\n  \"reason\": \"Coriander arrived wilted\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ]
+      }
+    },
+    {
+      "name": "17. Coupons — book",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base}}/api/coupons",
+          "host": [
+            "{{base}}"
+          ],
+          "path": [
+            "api",
+            "coupons"
+          ]
+        },
+        "description": "Live coupon book: FRESH10 (10% cap 100), SABZI50 (flat 50, min 299), MANGO20 (20% cap 80, min 199). Same PROMOS table the server validates at pay time."
+      }
+    },
+    {
+      "name": "18. Wallet — balance + ledger",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base}}/api/wallet?phone={{phone}}",
+          "host": [
+            "{{base}}"
+          ],
+          "path": [
+            "api",
+            "wallet"
+          ]
+        },
+        "description": "Signed ledger: WELCOME/REFERRAL/REFUND credit, SPEND debits. balanceRs = sum(amountRs)."
+      }
+    },
+    {
+      "name": "19. Notifications — inbox",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base}}/api/notifications?phone={{phone}}",
+          "host": [
+            "{{base}}"
+          ],
+          "path": [
+            "api",
+            "notifications"
+          ]
+        },
+        "description": "Latest 20 + unread count (ORDER | WALLET | SOCIAL | SYSTEM)."
+      }
+    },
+    {
+      "name": "20. Notifications — mark read",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{base}}/api/notifications",
+          "host": [
+            "{{base}}"
+          ],
+          "path": [
+            "api",
+            "notifications"
+          ]
+        },
+        "description": "Marks all unread read (or pass ids[]).",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"phone\": \"{{phone}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ]
+      }
+    },
+    {
+      "name": "21. Addresses — list",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base}}/api/addresses?phone={{phone}}",
+          "host": [
+            "{{base}}"
+          ],
+          "path": [
+            "api",
+            "addresses"
+          ]
+        },
+        "description": "Saved address book, default first."
+      }
+    },
+    {
+      "name": "22. Addresses — save",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{base}}/api/addresses",
+          "host": [
+            "{{base}}"
+          ],
+          "path": [
+            "api",
+            "addresses"
+          ]
+        },
+        "description": "label whitelisted Home|Work|Other; first address becomes default automatically.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"phone\": \"{{phone}}\",\n  \"label\": \"Home\",\n  \"receiver\": \"Anjali Sharma\",\n  \"line\": \"Flat 402, Sunrise Residency, Baner\",\n  \"city\": \"Pune\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ]
+      }
+    },
+    {
+      "name": "23. Addresses — delete",
+      "request": {
+        "method": "DELETE",
+        "url": {
+          "raw": "{{base}}/api/addresses?id={{addressId}}&phone={{phone}}",
+          "host": [
+            "{{base}}"
+          ],
+          "path": [
+            "api",
+            "addresses"
+          ]
+        },
+        "description": "Ownership-checked; deleting the default promotes the most recent one."
+      }
+    },
+    {
+      "name": "24. Referrals — my code",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base}}/api/referrals?phone={{phone}}",
+          "host": [
+            "{{base}}"
+          ],
+          "path": [
+            "api",
+            "referrals"
+          ]
+        },
+        "description": "Deterministic per-phone code AGR-XXXXXX + invites + earned."
+      }
+    },
+    {
+      "name": "25. Referrals — apply friend code (+₹50)",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{base}}/api/referrals",
+          "host": [
+            "{{base}}"
+          ],
+          "path": [
+            "api",
+            "referrals"
+          ]
+        },
+        "description": "Once per buyer; own-code and validity guards; credits the wallet + notification.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"code\": \"AGR-XXXXXX\",\n  \"phone\": \"{{phone}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ]
+      }
+    },
+    {
+      "name": "26. Subscription — state",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base}}/api/subscription?phone={{phone}}",
+          "host": [
+            "{{base}}"
+          ],
+          "path": [
+            "api",
+            "subscription"
+          ]
+        },
+        "description": "Latest order subscription state."
+      }
+    },
+    {
+      "name": "27. Subscription — skip / stop / resume",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{base}}/api/subscription",
+          "host": [
+            "{{base}}"
+          ],
+          "path": [
+            "api",
+            "subscription"
+          ]
+        },
+        "description": "action: SKIP (+7d) | CANCEL (clear) | RESUME (re-arm WEEKLY).",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"phone\": \"{{phone}}\",\n  \"action\": \"SKIP\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ]
+      }
+    }
+  ]
+}

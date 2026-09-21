@@ -1,0 +1,53 @@
+# AgriLink Bharat — local development compose (PROTOTYPE-GRADE, intentionally simple).
+#
+# Production note (see docs/TECH-JUSTIFICATION.md): this compose file exists so a
+# reviewer can run the MVP with two commands. Real deployment would instead use
+# AWS ECS Fargate (or EKS) services behind an ALB + Kong, RDS PostgreSQL (not the
+# SQLite file below), ElastiCache Redis, MSK/Kafka for event fan-out, and an image
+# registry — none of that is required (or implemented) for the demo.
+#
+# Usage:
+#   docker compose -f docker-compose.dev.yml up --build
+#   → web:      http://localhost:3000
+#   → realtime: socket.io on localhost:3003 (internal emit endpoint on 3004)
+#
+# Sandbox gateway quirk: the frontend connects its socket via the Caddy gateway
+# (io('/?XTransformPort=3003'), see Caddyfile). Locally without Caddy the socket
+# will not connect — the app automatically falls back to polling, so the demo
+# still works; to get live toasts, run Caddy or point the client at :3003 directly.
+
+services:
+  # ── db: none needed ────────────────────────────────────────────────────────
+  # SQLite is file-based (Prisma datasource: sqlite, DATABASE_URL=file:/app/db/custom.db),
+  # so there is NO database image/service here. The `db` "service" is simply the
+  # ./db directory on the host, bind-mounted into the web container below.
+  # Production would replace this with Amazon RDS PostgreSQL (see top comment).
+
+  # ── web: Next.js 16 app + API routes (modular monolith) ───────────────────
+  web:
+    image: node:22-alpine
+    working_dir: /app
+    # dev script = `next dev -p 3000` (from package.json). npm is used inside the
+    # container so this works without a bun install on the host.
+    command: sh -c "npm install --no-audit --no-fund && npm run db:push && npm run dev"
+    environment:
+      # SQLite lives in the mounted ./db folder → persists across container restarts
+      - DATABASE_URL=file:/app/db/custom.db
+      - NODE_ENV=development
+    ports:
+      - "3000:3000"   # Next.js app + API
+      - "3003:3003"   # socket.io gateway (published here because the realtime
+      - "3004:3004"   #   service shares this container's network namespace — see below)
+    volumes:
+      - .:/app        # source mount for hot reload; includes ./db (SQLite file)
+
+  # ── realtime: socket.io fan-out mini-service (Bun) ─────────────────────────
+  # network_mode shares the web container's network stack on purpose: the Next.js
+  # API layer hardcodes the internal emit call to http://127.0.0.1:3004/emit
+  # (src/lib/api.ts → emitEvent), so in prototype the two processes must share
+  # localhost. Production would publish events to Kafka instead — no co-location.
+  realtime:
+    build: ./mini-services/realtime-service
+    network_mode: "service:web"
+    depends_on:
+      - web
